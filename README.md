@@ -13,7 +13,11 @@ Example
 ```js
 var booh = require('booh');
 
-booh.screenshot('http://github.com', 'github.png');
+var browser = new booh.Browser();
+browser.load('http://github.com');
+browser.on('loadFinished', function () {
+    browser.screenshot('github.png');
+});
 ```
 
 Requirements

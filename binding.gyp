@@ -3,10 +3,8 @@
         {
             "target_name": "booh",
             "sources": [
-                "booh.cc",
-                "framecapture.cc",
-                "framecapture.h",
-                "<(INTERMEDIATE_DIR)/moc_framecapture.cc"
+                "src/booh.cc",
+                "src/browser.cc"
             ],
             "rules": [
                 {
@@ -23,7 +21,8 @@
             ],
             "qt_modules": "Qt5Core Qt5Gui Qt5Test Qt5Widgets Qt5WebKitWidgets",
             "cflags": [
-                "<!@(pkg-config --cflags <(_qt_modules))"
+                "<!@(pkg-config --cflags <(_qt_modules))",
+                "-std=c++11"
             ],
             "ldflags": [
                 "<!@(pkg-config --libs-only-L --libs-only-other <(_qt_modules))"

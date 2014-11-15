@@ -2,6 +2,35 @@
 
 #include <iostream>
 
+bool CapturePage::extension(
+        Extension extension,
+        const ExtensionOption* option,
+        ExtensionReturn *output)
+{
+    std::cerr << "EXTENSION" << std::endl;
+    if (extension != QWebPage::ErrorPageExtension)
+        return false;
+
+    ErrorPageExtensionOption *errorOption = (ErrorPageExtensionOption*) option;
+    std::cerr << "Error loading " << qPrintable(errorOption->url.toString())  << std::endl;
+    if(errorOption->domain == QWebPage::QtNetwork)
+        std::cerr << "Network error (" << errorOption->error << "): ";
+    else if(errorOption->domain == QWebPage::Http)
+        std::cerr << "HTTP error (" << errorOption->error << "): ";
+    else if(errorOption->domain == QWebPage::WebKit)
+        std::cerr << "WebKit error (" << errorOption->error << "): ";
+
+    std::cerr << qPrintable(errorOption->errorString) << std::endl;
+
+    return false;
+}
+
+bool CapturePage::supportsExtension(Extension extension) const
+{
+    return QWebPage::ErrorPageExtension == extension;
+}
+
+
 FrameCapture::FrameCapture(): QObject(), m_percent(0)
 {
     connect(&m_page, SIGNAL(loadProgress(int)), this, SLOT(printProgress(int)));
@@ -39,6 +68,7 @@ void FrameCapture::saveResult(bool ok)
         ok = size.width() != 0 && size.height() != 0;
     }
 
+    std::cout << "saveResult" << std::endl;
     // crude error-checking
     if (!ok) {
         std::cerr << "Failed loading " << qPrintable(m_page.mainFrame()->url().toString()) << std::endl;
@@ -56,6 +86,7 @@ void FrameCapture::saveFrame(QWebFrame *frame)
 {
     static int frameCounter = 0;
 
+    std::cout << "saveFrame" << std::endl;
     QString fileName(m_fileName);
     if (frameCounter) {
         int index = m_fileName.lastIndexOf('.');

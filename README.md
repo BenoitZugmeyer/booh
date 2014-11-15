@@ -29,6 +29,12 @@ Installation
 npm install git://github.com/BenoitZugmeyer/booh.git
 ```
 
+On ArchLinux, you will have to tell node-gyp to use python 2 like that:
+
+```
+PYTHON=python2 npm install git://github.com/BenoitZugmeyer/booh.git
+```
+
 Credits
 -------
 

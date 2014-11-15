@@ -1,0 +1,25 @@
+{
+    "name": "booh",
+    "version": "0.0.0",
+    "author": "Benoît Zugmeyer <bzugmeyer@gmail.com>",
+    "description": "Make website screenshot from nodejs",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/BenoitZugmeyer/booh.git"
+    },
+    "homepage": "https://github.com/BenoitZugmeyer/booh",
+    "main": "./build/Release/booh.node",
+    "keywords": [
+        "qt",
+        "qtwebkit",
+        "webkit",
+        "headless",
+        "screenshot"
+    ],
+    "engines": {
+        "node": ">=0.10.0"
+    },
+    "scripts": {
+        "install": "node-gyp rebuild"
+    }
+}

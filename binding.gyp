@@ -4,7 +4,11 @@
             "target_name": "booh",
             "sources": [
                 "src/booh.cc",
-                "src/browser.cc"
+                "src/browser.cc",
+
+                "src/webpage.cc",
+                "src/webpage.h",
+                "<(INTERMEDIATE_DIR)/moc_webpage.cc",
             ],
             "rules": [
                 {

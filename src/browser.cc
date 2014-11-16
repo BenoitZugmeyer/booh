@@ -23,6 +23,8 @@
 #include "./browser.h"
 #include "./util.h"
 
+int globalApplicationArgc = 0;
+char **globalApplicationArgv = NULL;
 QApplication *globalApplication = NULL;
 uv_timer_t timer;
 unsigned int runningBrowsers = 0;
@@ -52,6 +54,8 @@ void Browser::Init(v8::Handle<v8::Object> exports) {
   node::SetPrototypeMethod(tpl, "load", Load);
   node::SetPrototypeMethod(tpl, "close", Close);
   node::SetPrototypeMethod(tpl, "screenshot", Screenshot);
+  node::SetPrototypeMethod(tpl, "setSize", SetSize);
+  node::SetPrototypeMethod(tpl, "show", Show);
 
   constructor = v8::Persistent<v8::Function>::New(tpl->GetFunction());
   exports->Set(v8::String::NewSymbol("Browser"), constructor);
@@ -86,7 +90,7 @@ Browser::~Browser() {
   close();
 }
 
-QWebPage* Browser::webPage() {
+WebPage* Browser::webPage() {
   open();
   return _webPage;
 }
@@ -96,8 +100,7 @@ v8::Handle<v8::Value> Browser::Load(const v8::Arguments& args) {
 
   v8::HandleScope scope;
 
-  QUrl url = QUrl::fromUserInput(ToQString(args[0]));
-  self->webPage()->setViewportSize(QSize(512, 512));
+  QUrl url = QUrlFromValue(args[0]);
   self->webPage()->mainFrame()->load(url);
 
   return scope.Close(v8::Undefined());
@@ -113,36 +116,71 @@ v8::Handle<v8::Value> Browser::Close(const v8::Arguments& args) {
   return scope.Close(v8::Undefined());
 }
 
+v8::Handle<v8::Value> Browser::SetSize(const v8::Arguments& args) {
+  SELF(Browser);
+
+  v8::HandleScope scope;
+
+  QSize size = QSizeFromValue(args[0]);
+  auto webPage = self->webPage();
+  auto defaultSize = webPage->mainFrame()->contentsSize();
+  if (size.width() == 0) {
+    size.setWidth(defaultSize.width());
+  }
+  if (size.height() == 0) {
+    size.setHeight(defaultSize.height());
+  }
+
+  webPage->setViewportSize(size);
+
+  globalApplication->processEvents();
+
+  return scope.Close(v8::Undefined());
+}
+
 v8::Handle<v8::Value> Browser::Screenshot(const v8::Arguments& args) {
   SELF(Browser);
 
   v8::HandleScope scope;
 
   if (!args[0]->IsString()) {
-    THROW(v8::Exception::TypeError, "Browser#screenshot expects a string as argument");
+    THROW(v8::Exception::TypeError,
+        "Browser#screenshot expects a string as argument");
   }
 
-  QString fileName = ToQString(args[0]);
+  QString fileName = QStringFromValue(args[0]);
 
   auto frame = self->webPage()->mainFrame();
-  auto size = frame->contentsSize();
-
-  if (size.width() == 0 || size.height() == 0) {
-    THROW(v8::Exception::Error, "Nothing is painted (yet?)");
-  }
+  auto size = self->webPage()->viewportSize().boundedTo(frame->contentsSize());
 
   QImage image(size, QImage::Format_ARGB32_Premultiplied);
-
-  image.fill(Qt::transparent);
 
   QPainter painter(&image);
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setRenderHint(QPainter::TextAntialiasing, true);
   painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-  frame->documentElement().render(&painter);
+  // self->webPage()->mainFrame()->documentElement().render(&painter);
+  self->webPage()->mainFrame()->render(&painter);
   painter.end();
 
   image.save(fileName);
+
+  return scope.Close(v8::Undefined());
+}
+
+v8::Handle<v8::Value> Browser::Show(const v8::Arguments& args) {
+  SELF(Browser);
+
+  v8::HandleScope scope;
+
+  auto webPage = self->webPage();
+
+  auto window = new QMainWindow();
+  globalApplication->setActiveWindow(window);
+  auto webView = new QWebView(window);
+  window->setCentralWidget(webView);
+  webView->setPage(webPage);
+  window->show();
 
   return scope.Close(v8::Undefined());
 }
@@ -159,33 +197,63 @@ void Browser::open() {
   runningBrowsers++;
 
   if (globalApplication == NULL) {
-    int argc = 0;
-    char **argv = NULL;
-    globalApplication = new QApplication(argc, argv);
-
+    globalApplication = new QApplication(
+        globalApplicationArgc,
+        globalApplicationArgv);
     uv_timer_init(uv_default_loop(), &timer);
     uv_timer_start(&timer, processEvents, 0, 10);
   }
-  _webPage = new QWebPage(globalApplication);
+
+  _webPage = new WebPage(handle_, globalApplication);
+  _webPage->setViewportSize(QSize(1024, 200));
+  _webPage->mainFrame()->setScrollBarPolicy(
+      Qt::Vertical,
+      Qt::ScrollBarAlwaysOff);
+  _webPage->mainFrame()->setScrollBarPolicy(
+      Qt::Horizontal,
+      Qt::ScrollBarAlwaysOff);
 
   QObject::connect(_webPage, &QWebPage::loadFinished, [this](bool ok) {
     if (!this->isOpen()) {
       return;
     }
 
-    // This fixes some unfinished rendering of the page for some sites
-    // (example: http://google.fr)
-    globalApplication->processEvents();
+    auto event = v8::Object::New();
+    event->Set(AsValue("name"), AsValue("loadFinished"));
+    event->Set(AsValue("success"), AsValue(ok));
 
-    const unsigned argc = 1;
-    v8::Local<v8::Value> argv[argc] = {
-      v8::Local<v8::Value>::New(v8::String::New("loadFinished"))
-    };
-    auto global = v8::Context::GetCurrent()->Global();
-    this->_processEvent->Call(global, argc, argv);
+    this->emitEvent(event);
   });
-}
 
+  QObject::connect(_webPage, &QWebPage::loadProgress, [this](int progress) {
+    if (!this->isOpen()) {
+      return;
+    }
+
+    auto event = v8::Object::New();
+    event->Set(AsValue("name"), AsValue("loadProgress"));
+    event->Set(AsValue("progress"), AsValue(progress));
+
+    this->emitEvent(event);
+  });
+
+  QObject::connect(
+      _webPage->networkAccessManager(),
+      &QNetworkAccessManager::finished,
+      [this](QNetworkReply *reply) {
+        if (!this->isOpen()) {
+          return;
+        }
+
+        auto event = v8::Object::New();
+        event->Set(AsValue("name"), AsValue("requestFinished"));
+        event->Set(AsValue("request"), AsValue(reply->request()));
+        event->Set(AsValue("url"), AsValue(reply->url()));
+        event->Set(AsValue("headers"), AsValue(reply->rawHeaderPairs()));
+
+        this->emitEvent(event);
+      });
+}
 
 void Browser::close() {
   if (!isOpen()) {
@@ -197,4 +265,8 @@ void Browser::close() {
   delete tmp;
 
   runningBrowsers--;
+}
+
+void Browser::emitEvent(v8::Local<v8::Object> event) {
+    CALL(this->_processEvent, event);
 }

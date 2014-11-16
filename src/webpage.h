@@ -18,38 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef SRC_BROWSER_H_
-#define SRC_BROWSER_H_
+#ifndef SRC_WEBPAGE_H_
+#define SRC_WEBPAGE_H_
 
-#include <node.h>
 #include <QtWebKitWidgets>
+#include <v8.h>
 
-#include "./webpage.h"
+class WebPage : public QWebPage {
+  Q_OBJECT
 
-class Browser : public node::ObjectWrap {
  public:
-  static void Init(v8::Handle<v8::Object> exports);
+  explicit WebPage(v8::Handle<v8::Object> browser, QObject* parent = 0);
+
+  bool extension(
+      Extension extension,
+      const ExtensionOption* option = 0,
+      ExtensionReturn *output = 0);
+
+  bool supportsExtension(Extension extension) const;
+
+ protected:
+  QString userAgentForUrl(const QUrl& url) const;
 
  private:
-  explicit Browser(v8::Persistent<v8::Function> _processEvent);
-  ~Browser();
-
-  static v8::Handle<v8::Value> New(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Load(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Close(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Screenshot(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Show(const v8::Arguments& args);
-  static v8::Handle<v8::Value> SetSize(const v8::Arguments& args);
-  static v8::Persistent<v8::Function> constructor;
-
-  WebPage *webPage();
-  void open();
-  void close();
-  bool isOpen();
-  void emitEvent(v8::Local<v8::Object> infos);
-
-  v8::Persistent<v8::Function> _processEvent;
-  WebPage *_webPage;
+  v8::Handle<v8::Object> _browser;
 };
 
-#endif  // SRC_BROWSER_H_
+#endif  // SRC_WEBPAGE_H_

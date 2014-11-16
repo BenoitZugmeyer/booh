@@ -105,7 +105,7 @@ have one object as argument.
 
     :code:`event.request.url` string: the requested URL
 
-    :code:`event.request.headers` string: all request headers
+    :code:`event.request.headers` array: all request headers
 
 
 Credits

@@ -22,6 +22,7 @@
 #define SRC_UTIL_H_
 
 #include <node.h>
+#include <node/node_internals.h> // For ARRAY_SIZE
 #include <QString>
 
 #define SELF(type) type *self = ObjectWrap::Unwrap<type>(args.This());
@@ -33,10 +34,8 @@
 #define VA_NUM_ARGS(...) VA_NUM_ARGS_IMPL(0, ## __VA_ARGS__, 5, 4, 3, 2, 1, 0)
 #define VA_NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, N, ...) N
 
-#define CALL(_fct, ...) \
-    const unsigned argc = VA_NUM_ARGS(__VA_ARGS__); \
-    v8::Local<v8::Value> argv[argc] = { __VA_ARGS__ }; \
-    _fct->Call(v8::Context::GetCurrent()->Global(), argc, argv)
+#define CALL(_fct, _argv) \
+    _fct->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(_argv), _argv)
 
 
 /*

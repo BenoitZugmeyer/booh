@@ -56,10 +56,9 @@ QString WebPage::userAgentForUrl(const QUrl& url) const {
   auto fn = _browser->Get(AsValue("userAgentForUrl"));
 
   if (fn->IsFunction()) {
-    const unsigned argc = 1;
-    v8::Local<v8::Value> argv[argc] = { AsValue(url) };
-    auto value = v8::Local<v8::Function>::Cast(fn)->Call(
-        v8::Context::GetCurrent()->Global(), argc, argv);
+    v8::Local<v8::Value> argv[] = { AsValue(url) };
+    auto value = CALL(v8::Local<v8::Function>::Cast(fn), argv);
+
     auto result = QStringFromValue(value);
     if (result.size() > 0) {
       return result;

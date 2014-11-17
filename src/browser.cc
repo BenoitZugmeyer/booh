@@ -268,5 +268,6 @@ void Browser::close() {
 }
 
 void Browser::emitEvent(v8::Local<v8::Object> event) {
-    CALL(this->_processEvent, event);
+  v8::Local<v8::Value> argv[] = { event };
+  CALL(this->_processEvent, argv);
 }

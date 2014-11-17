@@ -132,14 +132,18 @@ void Browser::_close() {
 }
 
 Handle<Value> Browser::setSize(const Arguments& args) {
-  QSize size = QSizeFromValue(args[0]);
+  QSize size;
+  if (args[0]->IsObject()) {
+    size = QSizeFromValue(args[0]);
+  }
+
   auto defaultSize = webPage()->mainFrame()->contentsSize();
 
-  if (size.width() == 0) {
+  if (size.width() <= 0) {
     size.setWidth(defaultSize.width());
   }
 
-  if (size.height() == 0) {
+  if (size.height() <= 0) {
     size.setHeight(defaultSize.height());
   }
 

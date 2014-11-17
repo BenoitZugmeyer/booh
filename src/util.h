@@ -139,7 +139,7 @@ inline QSize QSizeFromValue(Local<Value> arg) {
   auto object = Handle<Object>::Cast(arg);
   auto width = object->Get(AsValue("width"));
   auto height = object->Get(AsValue("height"));
-  return QSize(IntFromValue(width), IntFromValue(height));
+  return QSize(IntFromValue(width, -1), IntFromValue(height, -1));
 }
 
 inline QUrl QUrlFromValue(Local<Value> arg) {

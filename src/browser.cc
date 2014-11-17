@@ -189,15 +189,15 @@ Handle<Value> Browser::screenshot(const Arguments& args) {
 Handle<Value> Browser::show(const Arguments& args) {
   auto page = webPage();
 
-  auto window = new QMainWindow();
+  _mainWindow = new QMainWindow();
 
-  auto webView = new QWebView(window);
-  webView->setPage(webPage);
+  _webView = new QWebView(_mainWindow);
+  _webView->setPage(page);
 
-  window->setCentralWidget(webView);
-  window->show();
+  _mainWindow->setCentralWidget(_webView);
+  _mainWindow->show();
 
-  globalApplication->setActiveWindow(window);
+  globalApplication->setActiveWindow(_mainWindow);
 
   return Undefined();
 }

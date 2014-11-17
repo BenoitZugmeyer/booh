@@ -91,22 +91,12 @@ Handle<Value> Browser::New(const Arguments& args) {
         "Please create an instance with 'new Browser(...)'");
   }
 
-  if (!args[0]->IsFunction()) {
-    THROW(Exception::TypeError,
-        "First argument should be a function");
-  }
-
-  auto processEvent = Persistent<Function>::New(
-      Handle<Function>::Cast(args[0]));
-
-  Browser* obj = new Browser(processEvent);
+  Browser* obj = new Browser();
   obj->Wrap(args.This());
   return args.This();
 }
 
-Browser::Browser(Persistent<Function> processEvent)
-  : _processEvent(processEvent) {
-  _webPage = NULL;
+Browser::Browser() : _webPage(NULL) {
 }
 
 Browser::~Browser() {
@@ -273,6 +263,10 @@ void Browser::_open() {
 }
 
 void Browser::emitEvent(Local<Object> event) {
-  Local<Value> argv[] = { event };
-  CALL(this->_processEvent, argv);
+  auto fn = handle_->Get(AsValue("processEvent"));
+
+  if (fn->IsFunction()) {
+    Local<Value> argv[] = { event };
+    CALL(Local<Function>::Cast(fn), argv);
+  }
 }

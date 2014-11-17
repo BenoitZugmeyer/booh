@@ -56,12 +56,11 @@ class Browser : public node::ObjectWrap {
   JSMETHOD(Browser, show)
   JSMETHOD(Browser, setSize)
 
-  Persistent<Function> _processEvent;
   WebPage *_webPage;
   QWebView *_webView;
   QMainWindow *_mainWindow;
 
-  explicit Browser(Persistent<Function> _processEvent);
+  Browser();
   ~Browser();
   WebPage *webPage();
   void _open();

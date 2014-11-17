@@ -34,30 +34,38 @@ using v8::Arguments;
 using v8::Object;
 using v8::Value;
 
+#define JSMETHOD(_type, _name) \
+  static v8::Handle<v8::Value> _name ## _static(const v8::Arguments &args) {\
+    v8::HandleScope scope; \
+    _type *self = node::ObjectWrap::Unwrap<_type>(args.This()); \
+    return scope.Close(self->_name(args)); \
+  } \
+  v8::Handle<v8::Value> _name(const v8::Arguments &args);
+
 class Browser : public node::ObjectWrap {
  public:
   static void Init(Handle<Object> exports);
 
  private:
-  explicit Browser(Persistent<Function> _processEvent);
-  ~Browser();
-
-  static Handle<Value> New(const Arguments& args);
-  static Handle<Value> Load(const Arguments& args);
-  static Handle<Value> Close(const Arguments& args);
-  static Handle<Value> Screenshot(const Arguments& args);
-  static Handle<Value> Show(const Arguments& args);
-  static Handle<Value> SetSize(const Arguments& args);
   static Persistent<Function> constructor;
+  static Handle<Value> New(const Arguments& args);
 
-  WebPage *webPage();
-  void open();
-  void close();
-  bool isOpen();
-  void emitEvent(Local<Object> infos);
+  JSMETHOD(Browser, load)
+  JSMETHOD(Browser, close)
+  JSMETHOD(Browser, screenshot)
+  JSMETHOD(Browser, show)
+  JSMETHOD(Browser, setSize)
 
   Persistent<Function> _processEvent;
   WebPage *_webPage;
+
+  explicit Browser(Persistent<Function> _processEvent);
+  ~Browser();
+  WebPage *webPage();
+  void _open();
+  void _close();
+  bool isOpen();
+  void emitEvent(Local<Object> infos);
 };
 
 #endif  // SRC_BROWSER_H_

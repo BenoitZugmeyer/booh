@@ -69,11 +69,11 @@ void Browser::Init(Handle<Object> exports) {
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
   // Prototype
-  SetPrototypeMethod(tpl, "load", Load);
-  SetPrototypeMethod(tpl, "close", Close);
-  SetPrototypeMethod(tpl, "screenshot", Screenshot);
-  SetPrototypeMethod(tpl, "setSize", setSize);
-  SetPrototypeMethod(tpl, "show", Show);
+  SetPrototypeMethod(tpl, "load", load_static);
+  SetPrototypeMethod(tpl, "close", close_static);
+  SetPrototypeMethod(tpl, "screenshot", screenshot_static);
+  SetPrototypeMethod(tpl, "setSize", setSize_static);
+  SetPrototypeMethod(tpl, "show", show_static);
 
   constructor = Persistent<Function>::New(tpl->GetFunction());
   exports->Set(String::NewSymbol("Browser"), constructor);
@@ -110,62 +110,57 @@ Browser::Browser(Persistent<Function> processEvent)
 }
 
 Browser::~Browser() {
-  close();
+  _close();
 }
 
 WebPage* Browser::webPage() {
-  open();
+  _open();
   return _webPage;
 }
 
-Handle<Value> Browser::Load(const Arguments& args) {
-  SELF(Browser);
-
-  HandleScope scope;
-
+Handle<Value> Browser::load(const Arguments& args) {
   QUrl url = QUrlFromValue(args[0]);
-  self->webPage()->mainFrame()->load(url);
-
-  return scope.Close(Undefined());
+  webPage()->mainFrame()->load(url);
+  return Undefined();
 }
 
-Handle<Value> Browser::Close(const Arguments& args) {
-  SELF(Browser);
-
-  HandleScope scope;
-
-  self->close();
-
-  return scope.Close(Undefined());
+Handle<Value> Browser::close(const Arguments& args) {
+  _close();
+  return Undefined();
 }
 
-Handle<Value> Browser::SetSize(const Arguments& args) {
-  SELF(Browser);
+void Browser::_close() {
+  if (!isOpen()) {
+    return;
+  }
 
-  HandleScope scope;
+  auto tmp = _webPage;
+  _webPage = NULL;
+  delete tmp;
 
+  runningBrowsers--;
+}
+
+Handle<Value> Browser::setSize(const Arguments& args) {
   QSize size = QSizeFromValue(args[0]);
-  auto webPage = self->webPage();
-  auto defaultSize = webPage->mainFrame()->contentsSize();
+  auto defaultSize = webPage()->mainFrame()->contentsSize();
+
   if (size.width() == 0) {
     size.setWidth(defaultSize.width());
   }
+
   if (size.height() == 0) {
     size.setHeight(defaultSize.height());
   }
 
-  webPage->setViewportSize(size);
+  webPage()->setViewportSize(size);
 
   globalApplication->processEvents();
 
-  return scope.Close(Undefined());
+  return Undefined();
 }
 
-Handle<Value> Browser::Screenshot(const Arguments& args) {
-  SELF(Browser);
-
-  HandleScope scope;
-
+Handle<Value> Browser::screenshot(const Arguments& args) {
   if (!args[0]->IsString()) {
     THROW(Exception::TypeError,
         "Browser#screenshot expects a string as argument");
@@ -173,8 +168,8 @@ Handle<Value> Browser::Screenshot(const Arguments& args) {
 
   QString fileName = QStringFromValue(args[0]);
 
-  auto frame = self->webPage()->mainFrame();
-  auto size = self->webPage()->viewportSize().boundedTo(frame->contentsSize());
+  auto frame = webPage()->mainFrame();
+  auto size = webPage()->viewportSize().boundedTo(frame->contentsSize());
 
   QImage image(size, QImage::Format_ARGB32_Premultiplied);
 
@@ -182,37 +177,36 @@ Handle<Value> Browser::Screenshot(const Arguments& args) {
   painter.setRenderHint(QPainter::Antialiasing, true);
   painter.setRenderHint(QPainter::TextAntialiasing, true);
   painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-  // self->webPage()->mainFrame()->documentElement().render(&painter);
-  self->webPage()->mainFrame()->render(&painter);
+  // webPage()->mainFrame()->documentElement().render(&painter);
+  webPage()->mainFrame()->render(&painter);
   painter.end();
 
   image.save(fileName);
 
-  return scope.Close(Undefined());
+  return Undefined();
 }
 
-Handle<Value> Browser::Show(const Arguments& args) {
-  SELF(Browser);
-
-  HandleScope scope;
-
-  auto webPage = self->webPage();
+Handle<Value> Browser::show(const Arguments& args) {
+  auto page = webPage();
 
   auto window = new QMainWindow();
-  globalApplication->setActiveWindow(window);
+
   auto webView = new QWebView(window);
-  window->setCentralWidget(webView);
   webView->setPage(webPage);
+
+  window->setCentralWidget(webView);
   window->show();
 
-  return scope.Close(Undefined());
+  globalApplication->setActiveWindow(window);
+
+  return Undefined();
 }
 
 bool Browser::isOpen() {
   return _webPage != NULL;
 }
 
-void Browser::open() {
+void Browser::_open() {
   if (isOpen()) {
     return;
   }
@@ -276,18 +270,6 @@ void Browser::open() {
 
         this->emitEvent(event);
       });
-}
-
-void Browser::close() {
-  if (!isOpen()) {
-    return;
-  }
-
-  auto tmp = _webPage;
-  _webPage = NULL;
-  delete tmp;
-
-  runningBrowsers--;
 }
 
 void Browser::emitEvent(Local<Object> event) {

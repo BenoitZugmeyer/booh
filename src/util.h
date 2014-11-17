@@ -25,11 +25,9 @@
 #include <node/node_internals.h> // For ARRAY_SIZE
 #include <QString>
 
-#define SELF(type) type *self = ObjectWrap::Unwrap<type>(args.This());
-
 #define THROW(type, message) \
   v8::ThrowException(type(v8::String::New(message)));\
-  return scope.Close(v8::Undefined());
+  return v8::Undefined();
 
 #define VA_NUM_ARGS(...) VA_NUM_ARGS_IMPL(0, ## __VA_ARGS__, 5, 4, 3, 2, 1, 0)
 #define VA_NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, N, ...) N

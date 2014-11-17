@@ -24,11 +24,14 @@
 #include <QtWebKitWidgets>
 #include <v8.h>
 
+using v8::Handle;
+using v8::Object;
+
 class WebPage : public QWebPage {
   Q_OBJECT
 
  public:
-  explicit WebPage(v8::Handle<v8::Object> browser, QObject* parent = 0);
+  explicit WebPage(Handle<Object> browser, QObject* parent = 0);
 
   bool extension(
       Extension extension,
@@ -41,7 +44,7 @@ class WebPage : public QWebPage {
   QString userAgentForUrl(const QUrl& url) const;
 
  private:
-  v8::Handle<v8::Object> _browser;
+  Handle<Object> _browser;
 };
 
 #endif  // SRC_WEBPAGE_H_

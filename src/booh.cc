@@ -24,7 +24,10 @@
 
 #include "./browser.h"
 
-void init(v8::Handle<v8::Object> exports) {
+using v8::Handle;
+using v8::Object;
+
+void init(Handle<Object> exports) {
   Browser::Init(exports);
 }
 

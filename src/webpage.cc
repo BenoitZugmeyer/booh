@@ -18,10 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+
 #include "./webpage.h"
 #include "./util.h"
 
-WebPage::WebPage(v8::Handle<v8::Object> browser, QObject* parent)
+using v8::Function;
+using v8::Handle;
+using v8::Local;
+using v8::Object;
+using v8::Value;
+
+WebPage::WebPage(Handle<Object> browser, QObject* parent)
   : QWebPage(parent), _browser(browser) {
 }
 
@@ -56,8 +63,8 @@ QString WebPage::userAgentForUrl(const QUrl& url) const {
   auto fn = _browser->Get(AsValue("userAgentForUrl"));
 
   if (fn->IsFunction()) {
-    v8::Local<v8::Value> argv[] = { AsValue(url) };
-    auto value = CALL(v8::Local<v8::Function>::Cast(fn), argv);
+    Local<Value> argv[] = { AsValue(url) };
+    auto value = CALL(Local<Function>::Cast(fn), argv);
 
     auto result = QStringFromValue(value);
     if (result.size() > 0) {

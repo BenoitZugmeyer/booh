@@ -26,29 +26,37 @@
 
 #include "./webpage.h"
 
+using v8::Handle;
+using v8::Local;
+using v8::Persistent;
+using v8::Function;
+using v8::Arguments;
+using v8::Object;
+using v8::Value;
+
 class Browser : public node::ObjectWrap {
  public:
-  static void Init(v8::Handle<v8::Object> exports);
+  static void Init(Handle<Object> exports);
 
  private:
-  explicit Browser(v8::Persistent<v8::Function> _processEvent);
+  explicit Browser(Persistent<Function> _processEvent);
   ~Browser();
 
-  static v8::Handle<v8::Value> New(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Load(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Close(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Screenshot(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Show(const v8::Arguments& args);
-  static v8::Handle<v8::Value> SetSize(const v8::Arguments& args);
-  static v8::Persistent<v8::Function> constructor;
+  static Handle<Value> New(const Arguments& args);
+  static Handle<Value> Load(const Arguments& args);
+  static Handle<Value> Close(const Arguments& args);
+  static Handle<Value> Screenshot(const Arguments& args);
+  static Handle<Value> Show(const Arguments& args);
+  static Handle<Value> SetSize(const Arguments& args);
+  static Persistent<Function> constructor;
 
   WebPage *webPage();
   void open();
   void close();
   bool isOpen();
-  void emitEvent(v8::Local<v8::Object> infos);
+  void emitEvent(Local<Object> infos);
 
-  v8::Persistent<v8::Function> _processEvent;
+  Persistent<Function> _processEvent;
   WebPage *_webPage;
 };
 

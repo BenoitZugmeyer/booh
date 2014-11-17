@@ -23,6 +23,16 @@
 #include "./browser.h"
 #include "./util.h"
 
+using v8::Handle;
+using v8::Local;
+using v8::Persistent;
+using v8::Function;
+using v8::Arguments;
+using v8::Undefined;
+using v8::Exception;
+using v8::HandleScope;
+using v8::FunctionTemplate;
+
 int globalApplicationArgc = 0;
 char **globalApplicationArgv = NULL;
 QApplication *globalApplication = NULL;
@@ -42,12 +52,12 @@ void processEvents(uv_timer_t* handle, int status) {
 }
 
 
-v8::Persistent<v8::Function> Browser::constructor;
+Persistent<Function> Browser::constructor;
 
-void Browser::Init(v8::Handle<v8::Object> exports) {
+void Browser::Init(Handle<Object> exports) {
   // Prepare constructor template
-  auto tpl = v8::FunctionTemplate::New(New);
-  tpl->SetClassName(v8::String::NewSymbol("Browser"));
+  auto tpl = FunctionTemplate::New(New);
+  tpl->SetClassName(String::NewSymbol("Browser"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
   // Prototype
@@ -57,31 +67,32 @@ void Browser::Init(v8::Handle<v8::Object> exports) {
   node::SetPrototypeMethod(tpl, "setSize", SetSize);
   node::SetPrototypeMethod(tpl, "show", Show);
 
-  constructor = v8::Persistent<v8::Function>::New(tpl->GetFunction());
-  exports->Set(v8::String::NewSymbol("Browser"), constructor);
+  constructor = Persistent<Function>::New(tpl->GetFunction());
+  exports->Set(String::NewSymbol("Browser"), constructor);
 }
 
-v8::Handle<v8::Value> Browser::New(const v8::Arguments& args) {
-  v8::HandleScope scope;
+Handle<Value> Browser::New(const Arguments& args) {
+  HandleScope scope;
 
   if (!args.IsConstructCall()) {
-    THROW(v8::Exception::TypeError,
+    THROW(Exception::TypeError,
         "Please create an instance with 'new Browser(...)'");
   }
 
   if (!args[0]->IsFunction()) {
-    THROW(v8::Exception::TypeError, "First argument should be a function");
+    THROW(Exception::TypeError,
+        "First argument should be a function");
   }
 
-  auto processEvent = v8::Persistent<v8::Function>::New(
-      v8::Handle<v8::Function>::Cast(args[0]));
+  auto processEvent = Persistent<Function>::New(
+      Handle<Function>::Cast(args[0]));
 
   Browser* obj = new Browser(processEvent);
   obj->Wrap(args.This());
   return args.This();
 }
 
-Browser::Browser(v8::Persistent<v8::Function> processEvent)
+Browser::Browser(Persistent<Function> processEvent)
   : _processEvent(processEvent) {
   _webPage = NULL;
 }
@@ -95,31 +106,31 @@ WebPage* Browser::webPage() {
   return _webPage;
 }
 
-v8::Handle<v8::Value> Browser::Load(const v8::Arguments& args) {
+Handle<Value> Browser::Load(const Arguments& args) {
   SELF(Browser);
 
-  v8::HandleScope scope;
+  HandleScope scope;
 
   QUrl url = QUrlFromValue(args[0]);
   self->webPage()->mainFrame()->load(url);
 
-  return scope.Close(v8::Undefined());
+  return scope.Close(Undefined());
 }
 
-v8::Handle<v8::Value> Browser::Close(const v8::Arguments& args) {
+Handle<Value> Browser::Close(const Arguments& args) {
   SELF(Browser);
 
-  v8::HandleScope scope;
+  HandleScope scope;
 
   self->close();
 
-  return scope.Close(v8::Undefined());
+  return scope.Close(Undefined());
 }
 
-v8::Handle<v8::Value> Browser::SetSize(const v8::Arguments& args) {
+Handle<Value> Browser::SetSize(const Arguments& args) {
   SELF(Browser);
 
-  v8::HandleScope scope;
+  HandleScope scope;
 
   QSize size = QSizeFromValue(args[0]);
   auto webPage = self->webPage();
@@ -135,16 +146,16 @@ v8::Handle<v8::Value> Browser::SetSize(const v8::Arguments& args) {
 
   globalApplication->processEvents();
 
-  return scope.Close(v8::Undefined());
+  return scope.Close(Undefined());
 }
 
-v8::Handle<v8::Value> Browser::Screenshot(const v8::Arguments& args) {
+Handle<Value> Browser::Screenshot(const Arguments& args) {
   SELF(Browser);
 
-  v8::HandleScope scope;
+  HandleScope scope;
 
   if (!args[0]->IsString()) {
-    THROW(v8::Exception::TypeError,
+    THROW(Exception::TypeError,
         "Browser#screenshot expects a string as argument");
   }
 
@@ -165,13 +176,13 @@ v8::Handle<v8::Value> Browser::Screenshot(const v8::Arguments& args) {
 
   image.save(fileName);
 
-  return scope.Close(v8::Undefined());
+  return scope.Close(Undefined());
 }
 
-v8::Handle<v8::Value> Browser::Show(const v8::Arguments& args) {
+Handle<Value> Browser::Show(const Arguments& args) {
   SELF(Browser);
 
-  v8::HandleScope scope;
+  HandleScope scope;
 
   auto webPage = self->webPage();
 
@@ -182,7 +193,7 @@ v8::Handle<v8::Value> Browser::Show(const v8::Arguments& args) {
   webView->setPage(webPage);
   window->show();
 
-  return scope.Close(v8::Undefined());
+  return scope.Close(Undefined());
 }
 
 bool Browser::isOpen() {
@@ -218,7 +229,7 @@ void Browser::open() {
       return;
     }
 
-    auto event = v8::Object::New();
+    auto event = Object::New();
     event->Set(AsValue("name"), AsValue("loadFinished"));
     event->Set(AsValue("success"), AsValue(ok));
 
@@ -230,7 +241,7 @@ void Browser::open() {
       return;
     }
 
-    auto event = v8::Object::New();
+    auto event = Object::New();
     event->Set(AsValue("name"), AsValue("loadProgress"));
     event->Set(AsValue("progress"), AsValue(progress));
 
@@ -245,7 +256,7 @@ void Browser::open() {
           return;
         }
 
-        auto event = v8::Object::New();
+        auto event = Object::New();
         event->Set(AsValue("name"), AsValue("requestFinished"));
         event->Set(AsValue("request"), AsValue(reply->request()));
         event->Set(AsValue("url"), AsValue(reply->url()));
@@ -267,7 +278,7 @@ void Browser::close() {
   runningBrowsers--;
 }
 
-void Browser::emitEvent(v8::Local<v8::Object> event) {
-  v8::Local<v8::Value> argv[] = { event };
+void Browser::emitEvent(Local<Object> event) {
+  Local<Value> argv[] = { event };
   CALL(this->_processEvent, argv);
 }

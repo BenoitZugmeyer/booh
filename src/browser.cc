@@ -32,6 +32,8 @@ using v8::Undefined;
 using v8::Exception;
 using v8::HandleScope;
 using v8::FunctionTemplate;
+using node::AtExit;
+using node::SetPrototypeMethod;
 
 int globalApplicationArgc = 0;
 char **globalApplicationArgv = NULL;
@@ -51,6 +53,12 @@ void processEvents(uv_timer_t* handle, int status) {
   }
 }
 
+#ifdef DEBUG
+void atExitChecks(void* args) {
+  printf("running browsers: %u\n", runningBrowsers);
+  printf("globalApplication is null: %d\n", globalApplication == NULL);
+}
+#endif
 
 Persistent<Function> Browser::constructor;
 
@@ -61,14 +69,18 @@ void Browser::Init(Handle<Object> exports) {
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
   // Prototype
-  node::SetPrototypeMethod(tpl, "load", Load);
-  node::SetPrototypeMethod(tpl, "close", Close);
-  node::SetPrototypeMethod(tpl, "screenshot", Screenshot);
-  node::SetPrototypeMethod(tpl, "setSize", SetSize);
-  node::SetPrototypeMethod(tpl, "show", Show);
+  SetPrototypeMethod(tpl, "load", Load);
+  SetPrototypeMethod(tpl, "close", Close);
+  SetPrototypeMethod(tpl, "screenshot", Screenshot);
+  SetPrototypeMethod(tpl, "setSize", setSize);
+  SetPrototypeMethod(tpl, "show", Show);
 
   constructor = Persistent<Function>::New(tpl->GetFunction());
   exports->Set(String::NewSymbol("Browser"), constructor);
+
+#ifdef DEBUG
+  AtExit(atExitChecks);
+#endif
 }
 
 Handle<Value> Browser::New(const Arguments& args) {

@@ -18,10 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#include <QString>
 #include <cstdio>
 
 #include "./browser.h"
-#include "./util.h"
+#include "./macros.h"
+#include "./conversion.h"
 
 using v8::Handle;
 using v8::Local;
@@ -74,6 +76,7 @@ void Browser::Init(Handle<Object> exports) {
   SetPrototypeMethod(tpl, "screenshot", screenshot_static);
   SetPrototypeMethod(tpl, "setSize", setSize_static);
   SetPrototypeMethod(tpl, "show", show_static);
+  SetPrototypeMethod(tpl, "send", send_static);
 
   constructor = Persistent<Function>::New(tpl->GetFunction());
   exports->Set(String::NewSymbol("Browser"), constructor);
@@ -196,6 +199,14 @@ Handle<Value> Browser::show(const Arguments& args) {
   return Undefined();
 }
 
+Handle<Value> Browser::send(const Arguments& args) {
+  auto nextArgument = QVariantFromValue(args[0]);
+  webPage()->bridge()->setNextArgument(&nextArgument);
+  auto result = webPage()->mainFrame()->evaluateJavaScript(
+      "window.booh.receive ? window.booh.receive(booh._getNextArgument()) : undefined");
+  return AsValue(result);
+}
+
 bool Browser::isOpen() {
   return _webPage != NULL;
 }
@@ -215,7 +226,7 @@ void Browser::_open() {
     uv_timer_start(&timer, processEvents, 0, 10);
   }
 
-  _webPage = new WebPage(handle_, globalApplication);
+  _webPage = new WebPage(this, globalApplication);
   _webPage->setViewportSize(QSize(1024, 200));
   _webPage->mainFrame()->setScrollBarPolicy(
       Qt::Vertical,
@@ -225,10 +236,6 @@ void Browser::_open() {
       Qt::ScrollBarAlwaysOff);
 
   QObject::connect(_webPage, &QWebPage::loadFinished, [this](bool ok) {
-    if (!this->isOpen()) {
-      return;
-    }
-
     auto event = Object::New();
     event->Set(AsValue("name"), AsValue("loadFinished"));
     event->Set(AsValue("success"), AsValue(ok));
@@ -237,10 +244,6 @@ void Browser::_open() {
   });
 
   QObject::connect(_webPage, &QWebPage::loadProgress, [this](int progress) {
-    if (!this->isOpen()) {
-      return;
-    }
-
     auto event = Object::New();
     event->Set(AsValue("name"), AsValue("loadProgress"));
     event->Set(AsValue("progress"), AsValue(progress));
@@ -252,10 +255,6 @@ void Browser::_open() {
       _webPage->networkAccessManager(),
       &QNetworkAccessManager::finished,
       [this](QNetworkReply *reply) {
-        if (!this->isOpen()) {
-          return;
-        }
-
         auto event = Object::New();
         event->Set(AsValue("name"), AsValue("requestFinished"));
         event->Set(AsValue("request"), AsValue(reply->request()));
@@ -267,10 +266,17 @@ void Browser::_open() {
 }
 
 void Browser::emitEvent(Local<Object> event) {
-  auto fn = handle_->Get(AsValue("processEvent"));
+  Local<Value> argv[] = { event };
+  call("processEvent", argv);
+}
+
+Handle<Value> Browser::call(
+        const char* method,
+        Local<Value> argv[]) {
+  auto fn = handle_->Get(AsValue(method));
 
   if (fn->IsFunction()) {
-    Local<Value> argv[] = { event };
-    CALL(Local<Function>::Cast(fn), argv);
+    return CALL(Local<Function>::Cast(fn), argv);
   }
+  return Undefined();
 }

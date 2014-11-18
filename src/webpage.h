@@ -24,6 +24,9 @@
 #include <QtWebKitWidgets>
 #include <v8.h>
 
+#include "./bridge.h"
+#include "./callable.h"
+
 using v8::Handle;
 using v8::Object;
 
@@ -31,7 +34,7 @@ class WebPage : public QWebPage {
   Q_OBJECT
 
  public:
-  explicit WebPage(Handle<Object> browser, QObject* parent = 0);
+  explicit WebPage(Callable* callable, QObject* parent = 0);
 
   bool extension(
       Extension extension,
@@ -39,12 +42,15 @@ class WebPage : public QWebPage {
       ExtensionReturn *output = 0);
 
   bool supportsExtension(Extension extension) const;
+  inline Bridge* bridge() { return &_bridge; };
 
  protected:
   QString userAgentForUrl(const QUrl& url) const;
+  void addBinding();
 
  private:
-  Handle<Object> _browser;
+  Callable* _callable;
+  Bridge _bridge;
 };
 
 #endif  // SRC_WEBPAGE_H_

@@ -18,15 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include <node.h>
+#ifndef SRC_BRIDGE_H_
+#define SRC_BRIDGE_H_
 
-#include "./browser.h"
+#include <QObject>
+#include <QVariant>
+#include <v8.h>
+
+#include "./callable.h"
 
 using v8::Handle;
 using v8::Object;
 
-void init(Handle<Object> exports) {
-  Browser::Init(exports);
-}
+class Bridge : public QObject {
+  Q_OBJECT
 
-NODE_MODULE(booh, init)
+ public:
+  explicit Bridge(Callable *callable) :
+    _callable(callable),
+    _nextArgument(NULL) {}
+
+  void setNextArgument(QVariant* nextArgument) { _nextArgument = nextArgument; }
+  Q_INVOKABLE QVariant _getNextArgument() {
+    if (_nextArgument == NULL) {
+      return QVariant();
+    }
+    auto result = _nextArgument;
+    _nextArgument = NULL;
+    return *result;
+  }
+  Q_INVOKABLE QVariant send(QVariant);
+
+ private:
+  Callable* _callable;
+  QVariant* _nextArgument;
+};
+
+#endif  // SRC_BRIDGE_H_

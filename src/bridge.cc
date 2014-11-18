@@ -18,15 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include <node.h>
+#include "./bridge.h"
+#include "./conversion.h"
 
-#include "./browser.h"
-
-using v8::Handle;
-using v8::Object;
-
-void init(Handle<Object> exports) {
-  Browser::Init(exports);
+QVariant Bridge::send(QVariant value) {
+  Local<Value> argv[] = { AsValue(value) };
+  auto result = _callable->call("receive", argv);
+  return QVariantFromValue(result);
 }
-
-NODE_MODULE(booh, init)

@@ -18,25 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef SRC_UTIL_H_
-#define SRC_UTIL_H_
+#ifndef SRC_CONVERSION_H_
+#define SRC_CONVERSION_H_
 
 #include <node.h>
-#include <node/node_internals.h> // For ARRAY_SIZE
 #include <QString>
-
-#define THROW(type, message) \
-  v8::ThrowException(type(v8::String::New(message)));\
-  return v8::Undefined();
-
-#define VA_NUM_ARGS(...) VA_NUM_ARGS_IMPL(0, ## __VA_ARGS__, 5, 4, 3, 2, 1, 0)
-#define VA_NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, N, ...) N
-
-#define CALL(_fct, _argv) \
-    _fct->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(_argv), _argv)
-
+#include <QUrl>
+#include <QSize>
+#include <QNetworkRequest>
 
 using v8::Local;
+using v8::Persistent;
 using v8::Handle;
 using v8::Value;
 using v8::String;
@@ -112,13 +104,17 @@ inline Local<Object> AsValue(QNetworkRequest request) {
   return result;
 }
 
+inline Local<Value> AsValue(QVariant arg) {
+  return AsValue(arg.toInt());
+}
+
 
 /*
  * FromValue implementations
  */
 
 inline QString QStringFromValue(
-    Local<Value> arg,
+    Handle<Value> arg,
     QString default_ = QString()) {
   if (arg->IsString()) {
     return QString::fromUtf16(*String::Value(arg));
@@ -146,10 +142,15 @@ inline QUrl QUrlFromValue(Local<Value> arg) {
   return QUrl::fromUserInput(QStringFromValue(arg));
 }
 
+inline QVariant QVariantFromValue(Handle<Value> arg) {
+  return QVariant(arg->Int32Value());
+}
+
 /* template<typename T> */
 /* inline QList<T> QListFromValue(Local<Value> v) { */
 /*   auto arg = Handle<Array>::Cast(v); */
 /*   return QList<T>(); */
 /* } */
 
-#endif  // SRC_UTIL_H_
+#endif  // SRC_CONVERSION_H_
+

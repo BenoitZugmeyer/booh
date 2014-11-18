@@ -22,9 +22,11 @@
 #define SRC_BROWSER_H_
 
 #include <node.h>
-#include <QtWebKitWidgets>
+#include <QWebView>
+#include <QMainWindow>
 
 #include "./webpage.h"
+#include "./callable.h"
 
 using v8::Handle;
 using v8::Local;
@@ -42,9 +44,12 @@ using v8::Value;
   } \
   v8::Handle<v8::Value> _name(const v8::Arguments &args);
 
-class Browser : public node::ObjectWrap {
+class Browser :
+    public node::ObjectWrap,
+    public Callable {
  public:
   static void Init(Handle<Object> exports);
+  Handle<Value> call(const char* method, Local<Value> argv[]);
 
  private:
   static Persistent<Function> constructor;
@@ -55,6 +60,7 @@ class Browser : public node::ObjectWrap {
   JSMETHOD(Browser, screenshot)
   JSMETHOD(Browser, show)
   JSMETHOD(Browser, setSize)
+  JSMETHOD(Browser, send)
 
   WebPage *_webPage;
   QWebView *_webView;

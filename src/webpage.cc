@@ -20,7 +20,8 @@
 
 
 #include "./webpage.h"
-#include "./util.h"
+#include "./conversion.h"
+#include "./callable.h"
 
 using v8::Function;
 using v8::Handle;
@@ -28,9 +29,20 @@ using v8::Local;
 using v8::Object;
 using v8::Value;
 
-WebPage::WebPage(Handle<Object> browser, QObject* parent)
-  : QWebPage(parent), _browser(browser) {
+WebPage::WebPage(Callable* callable, QObject* parent)
+  : QWebPage(parent),
+    _callable(callable),
+    _bridge(callable) {
+
+  addBinding();
+  connect(mainFrame(), &QWebFrame::javaScriptWindowObjectCleared,
+          this, &WebPage::addBinding);
 }
+
+void WebPage::addBinding() {
+  mainFrame()->addToJavaScriptWindowObject(QString("booh"), &_bridge);
+}
+
 
 bool WebPage::extension(
     Extension extension,
@@ -60,16 +72,11 @@ bool WebPage::supportsExtension(Extension extension) const {
 }
 
 QString WebPage::userAgentForUrl(const QUrl& url) const {
-  auto fn = _browser->Get(AsValue("userAgentForUrl"));
+  Local<Value> argv[] = { AsValue(url) };
+  auto result = QStringFromValue(_callable->call("userAgentForUrl", argv));
 
-  if (fn->IsFunction()) {
-    Local<Value> argv[] = { AsValue(url) };
-    auto value = CALL(Local<Function>::Cast(fn), argv);
-
-    auto result = QStringFromValue(value);
-    if (result.size() > 0) {
-      return result;
-    }
+  if (result.size() > 0) {
+    return result;
   }
 
   return QWebPage::userAgentForUrl(url);

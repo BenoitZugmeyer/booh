@@ -9,6 +9,10 @@
                 "src/webpage.cc",
                 "src/webpage.h",
                 "<(INTERMEDIATE_DIR)/moc_webpage.cc",
+
+                "src/bridge.cc",
+                "src/bridge.h",
+                "<(INTERMEDIATE_DIR)/moc_bridge.cc",
             ],
             "rules": [
                 {

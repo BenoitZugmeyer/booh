@@ -18,15 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#ifndef SRC_CALLABLE_H_
+#define SRC_CALLABLE_H_
+
 #include <node.h>
 
-#include "./browser.h"
-
 using v8::Handle;
-using v8::Object;
+using v8::Local;
+using v8::Value;
 
-void init(Handle<Object> exports) {
-  Browser::Init(exports);
-}
+class Callable {
+ public:
+  virtual Handle<Value> call(const char* method, Local<Value> argv[]) = 0;
+};
 
-NODE_MODULE(booh, init)
+#endif  // SRC_CALLABLE_H_
